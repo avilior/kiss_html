@@ -93,6 +93,72 @@ HTTP-aware reverse proxy on the host that sets `X-Forwarded-For`.
 To restrict the service to the local machine instead, change the port mapping
 in `docker-compose.yml` to `"127.0.0.1:8000:8000"`.
 
+## Deploying it
+
+The plumbing story doesn't end at the LAN. Two ways to put this somewhere real,
+both of which make the `forwarded for` line do useful work.
+
+### Behind Caddy
+
+Caddy terminates TLS, gives the service a real hostname, and — because it is
+HTTP-aware — passes the client's address along in `X-Forwarded-For`, which
+`reverse_proxy` sets automatically (along with `X-Forwarded-Proto` and
+`X-Forwarded-Host`).
+
+```
+hello.example.com {
+    reverse_proxy 127.0.0.1:8000
+}
+```
+
+Once something fronts the app, stop publishing it to the LAN independently —
+bind the mapping to loopback in `docker-compose.yml` so only Caddy can reach it:
+
+```yaml
+    ports:
+      - "127.0.0.1:8000:8000"
+```
+
+What the page will show in this setup: `peer address` becomes the Docker bridge
+gateway rather than Caddy's address, because on Linux a connection from the host
+to a published port goes through `docker-proxy`. `forwarded for` is the line
+carrying the real client. A direct external hit to a published port is the case
+where `peer address` is itself the truth, since that path is kernel DNAT and
+preserves the source.
+
+### On a tailnet (Tailscale)
+
+Tailscale changes the question from "is port 8000 reachable on my LAN" to "is
+this reachable from my devices, wherever they are" — without publishing a port
+to the LAN or the internet at all.
+
+Simplest form, with the container bound to loopback as above:
+
+```sh
+tailscale serve --bg 8000        # https://<machine>.<tailnet>.ts.net -> 127.0.0.1:8000
+tailscale serve status           # confirm what is mapped
+tailscale serve off              # tear it down
+```
+
+That gets an automatic HTTPS certificate and is reachable only by devices signed
+into the same tailnet. Older Tailscale versions spell this
+`tailscale serve https / http://127.0.0.1:8000`, so check `tailscale serve --help`
+if the short form is rejected.
+
+Requests then arrive from tailnet addresses in `100.64.0.0/10`, and `tailscale
+serve` proxies them, so expect `peer address` to be local and `forwarded for` to
+carry the client's `100.x` address — worth confirming with the page itself,
+which is precisely what that line is for.
+
+To put the *container* on the tailnet directly instead — its own tailnet IP and
+MagicDNS name, nothing published on the host — run a `tailscale/tailscale`
+sidecar sharing the app's network namespace, authenticated with an auth key.
+That is the tidier shape on a Linux host running several services.
+
+`tailscale funnel` will expose the same service to the public internet rather
+than just the tailnet. Reach for it deliberately: it is the one option here that
+makes the service reachable by anyone.
+
 ## How it works
 
 - **`app.py`** — a [FastAPI](https://fastapi.tiangolo.com/) application served
