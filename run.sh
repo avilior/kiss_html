@@ -26,6 +26,17 @@ APP_VERSION="${APP_VERSION:-0.1.0}"
 HEALTH_CMD='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health\").read()"'
 
 up() {
+  # `up` replaces any container holding the name. Refuse if that container
+  # belongs to compose — otherwise running this script silently destroys a
+  # `docker compose up` container, since both default to the name kiss-html.
+  if docker inspect "$NAME" \
+       --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null \
+       | grep -q .; then
+    echo "refusing: container '$NAME' is managed by docker compose." >&2
+    echo "use 'docker compose down' first, or set NAME= to something else." >&2
+    exit 1
+  fi
+
   docker build -t "$IMAGE" "$SCRIPT_DIR"
   docker rm -f "$NAME" >/dev/null 2>&1 || true
   docker run -d \

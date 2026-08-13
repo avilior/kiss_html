@@ -2,6 +2,7 @@
 
 import os
 import platform
+from datetime import datetime, timezone
 from importlib.metadata import version as pkg_version
 
 from fastapi import FastAPI, Request
@@ -29,6 +30,7 @@ PAGE = """<!doctype html>
   <h1>Hello</h1>
   <dl>
     <dt>served by</dt><dd>{host}</dd>
+    <dt>served at</dt><dd>{now}</dd>
     <dt>your address</dt><dd>{client}</dd>
   </dl>
 </main>
@@ -45,11 +47,15 @@ app = FastAPI(title="kiss_html", docs_url="/docs")
 
 
 @app.get("/", response_class=HTMLResponse)
-async def hello(request: Request) -> str:
-    return PAGE.format(
+async def hello(request: Request) -> HTMLResponse:
+    body = PAGE.format(
         host=HOSTNAME,
+        now=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         client=request.client.host if request.client else "unknown",
     )
+    # Without this the browser may serve a reload from cache and the timestamp
+    # would look frozen — the opposite of what it is there to show.
+    return HTMLResponse(body, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/health")
