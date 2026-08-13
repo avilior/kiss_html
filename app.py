@@ -1,7 +1,9 @@
-"""Minimal raw-ASGI app: a Hello page at /, a JSON health check at /health."""
+"""Minimal FastAPI app: a Hello page at /, a JSON health check at /health."""
 
-import json
 import os
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -34,43 +36,17 @@ PAGE = """<!doctype html>
 
 HOSTNAME = os.uname().nodename
 
+app = FastAPI(title="kiss_html", docs_url="/docs")
 
-async def app(scope, receive, send):
-    if scope["type"] == "lifespan":
-        while True:
-            message = await receive()
-            if message["type"] == "lifespan.startup":
-                await send({"type": "lifespan.startup.complete"})
-            elif message["type"] == "lifespan.shutdown":
-                await send({"type": "lifespan.shutdown.complete"})
-                return
-        return
 
-    if scope["type"] != "http":
-        return
+@app.get("/", response_class=HTMLResponse)
+async def hello(request: Request) -> str:
+    return PAGE.format(
+        host=HOSTNAME,
+        client=request.client.host if request.client else "unknown",
+    )
 
-    path = scope["path"]
 
-    if path == "/":
-        client = scope.get("client")
-        body = PAGE.format(
-            host=HOSTNAME,
-            client=client[0] if client else "unknown",
-        ).encode()
-        status, content_type = 200, "text/html; charset=utf-8"
-    elif path == "/health":
-        body = json.dumps({"status": "ok", "host": HOSTNAME}).encode()
-        status, content_type = 200, "application/json"
-    else:
-        body = b"Not Found\n"
-        status, content_type = 404, "text/plain; charset=utf-8"
-
-    await send({
-        "type": "http.response.start",
-        "status": status,
-        "headers": [
-            (b"content-type", content_type.encode()),
-            (b"content-length", str(len(body)).encode()),
-        ],
-    })
-    await send({"type": "http.response.body", "body": body})
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "host": HOSTNAME}

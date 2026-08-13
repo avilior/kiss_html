@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir uv
 # Pin to the image's own interpreter so the venv's symlinks stay valid when the
 # venv is copied into the runtime stage (identical base image).
 RUN uv venv --python /usr/local/bin/python3.13 /app/.venv \
- && VIRTUAL_ENV=/app/.venv uv pip install --no-cache uvicorn
+ && VIRTUAL_ENV=/app/.venv uv pip install --no-cache fastapi uvicorn
 
 # ---------------------------------------------------------------------------
 # Runtime stage
