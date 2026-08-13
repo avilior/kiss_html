@@ -1,0 +1,32 @@
+# Everything the image doesn't need. Keeps the build context small and stops
+# unrelated edits from invalidating the COPY layer's cache.
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Tooling / editors
+.claude/
+.idea/
+.vscode/
+.DS_Store
+
+# VCS
+.git/
+.gitignore
+
+# Docker's own files — never needed inside the image
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Docs
+README*
+*.md

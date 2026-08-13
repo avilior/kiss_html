@@ -1,0 +1,20 @@
+services:
+  web:
+    build: .
+    image: kiss-html:latest
+    container_name: kiss-html
+    # 0.0.0.0 on the host side — reachable from anywhere on the LAN.
+    # Change to "127.0.0.1:8000:8000" to restrict it to this machine.
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/").read()
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
