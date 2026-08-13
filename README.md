@@ -35,6 +35,24 @@ rebuilding by setting `APP_VERSION` in the shell or in a `.env` file:
 APP_VERSION=1.2.3 docker compose up -d
 ```
 
+### Without compose
+
+`run.sh` does the same thing with plain `docker`:
+
+```sh
+./run.sh up                      # build and start
+./run.sh status                  # health, ports, version
+./run.sh logs                    # follow logs
+./run.sh down                    # stop and remove
+```
+
+It honours the same `PORT` and `APP_VERSION` overrides, plus `NAME` and
+`IMAGE`:
+
+```sh
+PORT=9000 APP_VERSION=1.2.3 ./run.sh up
+```
+
 ## Testing LAN reachability
 
 The port is published on all host interfaces, so the container answers on your

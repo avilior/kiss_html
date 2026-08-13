@@ -27,6 +27,7 @@ venv/
 # Docker's own files — never needed inside the image
 Dockerfile
 .dockerignore
+run.sh
 docker-compose.yml
 docker-compose.*.yml
 
