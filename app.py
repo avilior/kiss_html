@@ -1,6 +1,8 @@
-"""Minimal FastAPI app: a Hello page at /, a JSON health check at /health."""
+"""Minimal FastAPI app: a Hello page at /, plus /health and /version."""
 
 import os
+import platform
+from importlib.metadata import version as pkg_version
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -36,6 +38,9 @@ PAGE = """<!doctype html>
 
 HOSTNAME = os.uname().nodename
 
+# Overridable at run time so a deploy can stamp which build is actually live.
+APP_VERSION = os.environ.get("APP_VERSION", "0.1.0")
+
 app = FastAPI(title="kiss_html", docs_url="/docs")
 
 
@@ -50,3 +55,13 @@ async def hello(request: Request) -> str:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "host": HOSTNAME}
+
+
+@app.get("/version")
+async def version() -> dict[str, str]:
+    return {
+        "version": APP_VERSION,
+        "python": platform.python_version(),
+        "fastapi": pkg_version("fastapi"),
+        "host": HOSTNAME,
+    }
