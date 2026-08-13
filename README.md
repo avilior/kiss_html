@@ -4,8 +4,14 @@ A deliberately minimal containerized HTTP endpoint, for testing network
 plumbing — is the container reachable from the LAN, is the port mapped, does
 the health check pass.
 
-One endpoint, `/`, returns a Hello page showing the container's hostname and
-the address it saw the request come from. Everything else returns 404.
+Two endpoints:
+
+| Endpoint  | Response                                                              |
+| --------- | --------------------------------------------------------------------- |
+| `/`       | HTML Hello page showing the container hostname and the client address  |
+| `/health` | `{"status": "ok", "host": "<hostname>"}`                               |
+
+Everything else returns 404.
 
 ## Run it
 
@@ -50,5 +56,5 @@ in `docker-compose.yml` to `"127.0.0.1:8000:8000"`.
   stage, so uv and its caches never ship. The container runs unprivileged as
   uid 10001. Final image is roughly 80 MB, most of which is `python:3.13-alpine`.
 - **`docker-compose.yml`** — builds the image, publishes port 8000, restarts
-  unless explicitly stopped, and health-checks via stdlib `urllib` (there is no
-  `curl` in the alpine image).
+  unless explicitly stopped, and polls `/health` via stdlib `urllib` (there is
+  no `curl` in the alpine image).

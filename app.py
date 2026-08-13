@@ -1,5 +1,6 @@
-"""Minimal raw-ASGI app: serves a Hello page at / and 404s everything else."""
+"""Minimal raw-ASGI app: a Hello page at /, a JSON health check at /health."""
 
+import json
 import os
 
 PAGE = """<!doctype html>
@@ -48,16 +49,21 @@ async def app(scope, receive, send):
     if scope["type"] != "http":
         return
 
-    if scope["path"] != "/":
-        body = b"Not Found\n"
-        status, content_type = 404, "text/plain; charset=utf-8"
-    else:
+    path = scope["path"]
+
+    if path == "/":
         client = scope.get("client")
         body = PAGE.format(
             host=HOSTNAME,
             client=client[0] if client else "unknown",
         ).encode()
         status, content_type = 200, "text/html; charset=utf-8"
+    elif path == "/health":
+        body = json.dumps({"status": "ok", "host": HOSTNAME}).encode()
+        status, content_type = 200, "application/json"
+    else:
+        body = b"Not Found\n"
+        status, content_type = 404, "text/plain; charset=utf-8"
 
     await send({
         "type": "http.response.start",
