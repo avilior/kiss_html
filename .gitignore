@@ -8,7 +8,8 @@ venv/
 .ruff_cache/
 .pytest_cache/
 
-# Local tooling state
+# Local env / tooling state
+.env
 .claude/settings.local.json
 
 # macOS

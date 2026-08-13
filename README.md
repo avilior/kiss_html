@@ -28,6 +28,13 @@ docker compose logs -f   # watch requests arrive
 docker compose down      # stop
 ```
 
+`/version` reports `0.1.0` by default. Stamp a different build without
+rebuilding by setting `APP_VERSION` in the shell or in a `.env` file:
+
+```sh
+APP_VERSION=1.2.3 docker compose up -d
+```
+
 ## Testing LAN reachability
 
 The port is published on all host interfaces, so the container answers on your

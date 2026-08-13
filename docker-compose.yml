@@ -3,6 +3,10 @@ services:
     build: .
     image: kiss-html:latest
     container_name: kiss-html
+    # Falls back to 0.1.0 unless APP_VERSION is set in the shell or a .env file:
+    #   APP_VERSION=1.2.3 docker compose up -d
+    environment:
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
     # 0.0.0.0 on the host side — reachable from anywhere on the LAN.
     # Change to "127.0.0.1:8000:8000" to restrict it to this machine.
     ports:

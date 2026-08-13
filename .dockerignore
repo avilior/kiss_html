@@ -11,6 +11,9 @@ venv/
 .ruff_cache/
 .pytest_cache/
 
+# Local env
+.env
+
 # Tooling / editors
 .claude/
 .idea/
