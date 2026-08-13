@@ -1,5 +1,6 @@
 """Minimal FastAPI app: a Hello page at /, plus /health and /version."""
 
+import html
 import os
 import platform
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ PAGE = """<!doctype html>
   <dl>
     <dt>served by</dt><dd>{host}</dd>
     <dt>served at</dt><dd>{now}</dd>
-    <dt>your address</dt><dd>{client}</dd>
+    <dt>peer address</dt><dd>{peer}</dd>{forwarded}
   </dl>
 </main>
 </body>
@@ -48,10 +49,24 @@ app = FastAPI(title="kiss_html", docs_url="/docs")
 
 @app.get("/", response_class=HTMLResponse)
 async def hello(request: Request) -> HTMLResponse:
+    # The peer address is whoever opened the TCP connection. Behind a proxy —
+    # including Docker Desktop's port forwarder on macOS — that is the proxy,
+    # not the client. X-Forwarded-For carries the original address, but only a
+    # proxy you control can be trusted to set it, so it is shown as a separate,
+    # clearly labelled line rather than silently replacing the peer address.
+    peer = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+
     body = PAGE.format(
         host=HOSTNAME,
         now=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        client=request.client.host if request.client else "unknown",
+        peer=html.escape(peer),
+        # Escaped: this value comes straight from a request header.
+        forwarded=(
+            f"\n    <dt>forwarded for</dt><dd>{html.escape(forwarded)}</dd>"
+            if forwarded
+            else ""
+        ),
     )
     # Without this the browser may serve a reload from cache and the timestamp
     # would look frozen — the opposite of what it is there to show.
