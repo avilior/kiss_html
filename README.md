@@ -184,13 +184,30 @@ hello.example.com {
 }
 ```
 
-Once something fronts the app, stop publishing it to the LAN independently —
-bind the mapping to loopback in `docker-compose.yml` so only Caddy can reach it:
+Once something fronts the app, stop publishing it to the LAN independently — but
+how depends on where Caddy runs.
+
+**Caddy on the same host:** bind the mapping to loopback so only Caddy can reach
+it.
 
 ```yaml
     ports:
       - "127.0.0.1:8000:8000"
 ```
+
+**Caddy on a different host** (say Caddy on `proxy.local`, app on `app.local`):
+loopback would lock the proxy out. Leave the port published on all interfaces
+and point the proxy at the app's host, restricting access at the firewall rather
+than the bind address:
+
+```
+hello.example.com {
+    reverse_proxy app.local:8000
+}
+```
+
+In that arrangement `peer address` shows the proxy's real address, since it
+crosses the network normally, and `forwarded for` carries the client.
 
 What the page will show in this setup: `peer address` becomes the Docker bridge
 gateway rather than Caddy's address, because on Linux a connection from the host
