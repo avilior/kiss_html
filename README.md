@@ -121,12 +121,17 @@ Enable IPv6 on the Docker network:
 /etc/docker/daemon.json
 {
   "ipv6": true,
-  "fixed-cidr-v6": "fd00:d0ck:e400::/64",
+  "fixed-cidr-v6": "fd2c:9a13:4f7e::/64",
   "ip6tables": true
 }
 ```
 
-then `sudo systemctl restart docker` and recreate the container. Under compose,
+`fixed-cidr-v6` is a ULA prefix (`fd00::/8`). Generate your own random global
+ID for it rather than reusing a memorable one like `fd00:dead:beef::` — ULAs are
+only collision-free if they are actually random, which matters as soon as
+networks get bridged or joined over a VPN.
+
+Then `sudo systemctl restart docker` and recreate the container. Under compose,
 also mark the network:
 
 ```yaml
