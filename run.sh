@@ -29,7 +29,9 @@ up() {
   # `up` replaces any container holding the name. Refuse if that container
   # belongs to compose — otherwise running this script silently destroys a
   # `docker compose up` container, since both default to the name kiss-html.
-  if docker inspect "$NAME" \
+  # --type container: without it, inspect also matches the IMAGE named
+  # kiss-html, which compose stamps with project labels when it builds.
+  if docker inspect --type container "$NAME" \
        --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null \
        | grep -q .; then
     echo "refusing: container '$NAME' is managed by docker compose." >&2
