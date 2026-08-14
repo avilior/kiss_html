@@ -90,6 +90,66 @@ So on macOS, use the hostname and timestamp to confirm reachability, and treat
 the peer address as an artifact. To recover real client addresses there, put an
 HTTP-aware reverse proxy on the host that sets `X-Forwarded-For`.
 
+### The IPv6 trap
+
+On Linux the peer address is correct **for IPv4 clients**. It is not for IPv6
+ones, and the failure looks identical to a broken NAT setup, so it is worth
+recognising.
+
+Docker installs no ip6tables NAT rules by default, so an IPv6 connection to a
+published port has no DNAT path. It lands on the `-host-ip ::` `docker-proxy`
+process instead, which opens a *fresh IPv4 connection* to the container from the
+host — and the container sees the bridge gateway rather than the client. Every
+IPv6 client then looks like the same address.
+
+This bites hardest with mDNS/`.local` names, which usually resolve to both
+families, and macOS, iOS, and most modern clients prefer IPv6. Measured against
+a Debian host whose Docker config was entirely correct — DNAT rule present,
+`PREROUTING` jump present, `ip_forward=1`:
+
+```
+curl -4 http://host.local:8000/   ->  peer address 172.17.17.160   (real client)
+curl -6 http://host.local:8000/   ->  peer address 172.18.0.1      (docker0 gateway)
+```
+
+Note the container is IPv4-only, so even enabling `ip6tables` alone will not
+help: an IPv6 client cannot be DNAT'd to an IPv4 destination — that would be
+NAT64, which Docker does not do. The container itself needs an IPv6 address.
+Enable IPv6 on the Docker network:
+
+```json
+/etc/docker/daemon.json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "fd00:d0ck:e400::/64",
+  "ip6tables": true
+}
+```
+
+then `sudo systemctl restart docker` and recreate the container. Under compose,
+also mark the network:
+
+```yaml
+networks:
+  default:
+    enable_ipv6: true
+```
+
+Confirm with `curl -6` — the peer address should become the client's real IPv6
+address. Diagnosing this from scratch means checking, in order: the DNAT rule
+(`sudo iptables -t nat -S DOCKER`), the dispatch to it
+(`sudo iptables -t nat -S PREROUTING`), `cat /proc/sys/net/ipv4/ip_forward`,
+and then — the one that actually mattered — whether the client is using IPv6 at
+all.
+
+While editing `daemon.json`, check that Docker's default pool does not overlap
+your LAN. The default is `172.17.0.0/16`; a LAN on `172.17.x.x` will eventually
+collide and containers will lose the ability to reach LAN hosts:
+
+```json
+  "default-address-pools": [{"base": "10.201.0.0/16", "size": 24}]
+```
+
 To restrict the service to the local machine instead, change the port mapping
 in `docker-compose.yml` to `"127.0.0.1:8000:8000"`.
 
