@@ -140,6 +140,14 @@ networks:
     enable_ipv6: true
 ```
 
+The listener has to accept both families too, and that is easy to get wrong:
+`uvicorn --host 0.0.0.0` is IPv4-only, and `--host ::` is IPv6-only, because
+asyncio sets `IPV6_V6ONLY` on the sockets it creates regardless of the
+`net.ipv6.bindv6only` default. Either way the wrong family reaches the container
+and gets a RST, which surfaces as *connection refused* — indistinguishable from
+a firewall problem. `serve.py` sidesteps this by creating one socket with
+`dualstack_ipv6=True` and handing it to uvicorn.
+
 Confirm with `curl -6` — the peer address should become the client's real IPv6
 address. Diagnosing this from scratch means checking, in order: the DNAT rule
 (`sudo iptables -t nat -S DOCKER`), the dispatch to it
@@ -227,7 +235,7 @@ makes the service reachable by anyone.
 ## How it works
 
 - **`app.py`** — a [FastAPI](https://fastapi.tiangolo.com/) application served
-  by `uvicorn`. Three routes, plus the interactive docs FastAPI generates for
+  by `uvicorn` via `serve.py`, which binds one dual-stack socket. Three routes, plus the interactive docs FastAPI generates for
   free at `/docs`. `/version` reports `APP_VERSION` from the environment
   (default `0.1.0`), so a deploy can stamp which build is actually live.
   Add dependencies to the `uv pip install` line in the Dockerfile as it grows.

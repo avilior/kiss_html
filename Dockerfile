@@ -31,7 +31,7 @@ WORKDIR /app
 
 # The whole app. Raw ASGI — no web framework, so the image stays small and the
 # only moving part is uvicorn itself.
-COPY app.py /app/app.py
+COPY app.py serve.py /app/
 
 # Run unprivileged.
 RUN adduser -D -u 10001 app && chown -R app:app /app
@@ -39,4 +39,6 @@ USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# serve.py binds one dual-stack socket and hands it to uvicorn. Neither
+# --host 0.0.0.0 nor --host :: accepts both families; see serve.py.
+CMD ["python", "serve.py"]
