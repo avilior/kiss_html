@@ -22,3 +22,11 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+
+# Daemon-level "ipv6"/"fixed-cidr-v6" settings apply to the default bridge only,
+# so the compose network has to opt in for containers to get an IPv6 address.
+# Without one, IPv6 clients reach the app through docker-proxy and every one of
+# them appears as the bridge gateway. See "The IPv6 trap" in the README.
+networks:
+  default:
+    enable_ipv6: true
